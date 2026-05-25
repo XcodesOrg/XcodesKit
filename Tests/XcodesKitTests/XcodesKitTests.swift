@@ -1102,7 +1102,7 @@ final class XcodesKitTests: XCTestCase {
         ])
     }
 
-    func testXcodeListServiceFiltersArchitectureSpecificPrereleaseWhenReleaseHasSameArchitecture() throws {
+    func testXcodeListServiceKeepsArchitectureSpecificPrereleaseWhenReleaseHasSameArchitecture() throws {
         let release = AvailableXcode(
             version: try XCTUnwrap(Version("26.5.0+17F42")),
             url: try XCTUnwrap(URL(string: "https://apple.com/xcode-arm64.xip")),
@@ -1124,7 +1124,8 @@ final class XcodesKitTests: XCTestCase {
         ])
 
         XCTAssertEqual(filtered.map(\.xcodeID), [
-            release.xcodeID
+            release.xcodeID,
+            prerelease.xcodeID
         ])
     }
 
