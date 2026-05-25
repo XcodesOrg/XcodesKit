@@ -52,6 +52,24 @@ final class ArchitectureFilteringTests: XCTestCase {
         ])
     }
 
+    func testXcodeListPresentationServiceFiltersPrereleaseWithSameBuildAndArchitecture() throws {
+        let release = availableXcode("26.5.0+17F42", filename: "Xcode-26.5-arm64.xip", architectures: [.arm64])
+        let prerelease = availableXcode("26.5.0-Release.Candidate+17F42", filename: "Xcode-26.5-rc-arm64.xip", architectures: [.arm64])
+
+        let rows = XcodeListPresentationService().availableRows(
+            availableXcodes: [release, prerelease],
+            installedXcodes: [],
+            selectedXcodePath: nil,
+            dataSource: .xcodeReleases,
+            architectures: [.variant(.appleSilicon)]
+        )
+
+        XCTAssertEqual(rows.map(\.version), [release.version])
+        XCTAssertEqual(rows.map(\.versionDescription), [
+            "26.5 (17F42) [Apple Silicon]"
+        ])
+    }
+
     func testArchitectureFiltersParseRawArchitecturesAndVariants() {
         XCTAssertEqual(ArchitectureFilter("arm64"), .architecture(.arm64))
         XCTAssertEqual(ArchitectureFilter("x86_64"), .architecture(.x86_64))

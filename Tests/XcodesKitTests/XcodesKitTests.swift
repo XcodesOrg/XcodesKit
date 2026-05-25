@@ -1076,7 +1076,7 @@ final class XcodesKitTests: XCTestCase {
         ])
     }
 
-    func testXcodeListServiceKeepsArchitectureSpecificPrereleaseWithDuplicateBuildMetadata() throws {
+    func testXcodeListServiceKeepsArchitectureSpecificPrereleaseWithDuplicateBuildMetadataWhenReleaseHasNoArchitecture() throws {
         let release = AvailableXcode(
             version: try XCTUnwrap(Version("16.0.0+16A1")),
             url: try XCTUnwrap(URL(string: "https://apple.com/xcode.xip")),
@@ -1099,6 +1099,32 @@ final class XcodesKitTests: XCTestCase {
         XCTAssertEqual(filtered.map(\.xcodeID), [
             release.xcodeID,
             architectureSpecificPrerelease.xcodeID
+        ])
+    }
+
+    func testXcodeListServiceFiltersArchitectureSpecificPrereleaseWhenReleaseHasSameArchitecture() throws {
+        let release = AvailableXcode(
+            version: try XCTUnwrap(Version("26.5.0+17F42")),
+            url: try XCTUnwrap(URL(string: "https://apple.com/xcode-arm64.xip")),
+            filename: "mock-arm64.xip",
+            releaseDate: nil,
+            architectures: [.arm64]
+        )
+        let prerelease = AvailableXcode(
+            version: try XCTUnwrap(Version("26.5.0-Release.Candidate+17F42")),
+            url: try XCTUnwrap(URL(string: "https://apple.com/xcode-rc-arm64.xip")),
+            filename: "mock-rc-arm64.xip",
+            releaseDate: nil,
+            architectures: [.arm64]
+        )
+
+        let filtered = XcodeListService.filteringPrereleasesWithDuplicateBuildMetadata([
+            release,
+            prerelease
+        ])
+
+        XCTAssertEqual(filtered.map(\.xcodeID), [
+            release.xcodeID
         ])
     }
 

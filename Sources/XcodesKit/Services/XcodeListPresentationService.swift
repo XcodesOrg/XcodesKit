@@ -41,12 +41,13 @@ public struct XcodeListPresentationService: Sendable {
             )
             : availableXcodes)
             .matchingArchitectureFilters(architectures)
+        let visibleAvailableXcodes = XcodeListService.filteringPrereleasesWithDuplicateBuildMetadata(adjustedAvailableXcodes)
 
         let adjustedInstalledXcodes = architectures.isEmpty
             ? installedXcodes
             : installedXcodes.filter { architectures.matches($0.xcodeID.architectures) }
 
-        var releasedVersions = adjustedAvailableXcodes.map {
+        var releasedVersions = visibleAvailableXcodes.map {
             ReleasedVersion(version: $0.version, releaseDate: $0.releaseDate, architectures: $0.architectures)
         }
 
