@@ -21,6 +21,22 @@ Then depend on the library product from your target:
 .product(name: "XcodesKit", package: "XcodesKit")
 ```
 
+## API Documentation
+
+XcodesKit includes a DocC catalog at `Sources/XcodesKit/Documentation.docc`.
+Open the package in Xcode and choose **Product > Build Documentation** to browse the public API grouped by workflow.
+
+The main entry points are:
+
+- `XcodeListService` for loading Xcode release metadata from Apple or Xcode Releases.
+- `InstalledXcodeDiscoveryService` for reading installed Xcode bundles.
+- `XcodeListComposer` and `XcodeListPresentationService` for building UI-ready Xcode lists.
+- `XcodeArchiveService`, `XcodeArchiveInstallService`, and `XcodeUnarchiveService` for archive download and install workflows.
+- `XcodeSelectionService` for selecting an installed Xcode.
+- `RuntimeService` and the runtime install services for simulator runtime discovery and installation.
+
+Most services provide default initializers for real network, filesystem, and shell behavior, plus closure-based initializers for tests and host-app integration.
+
 ## Development
 
 Build the package:

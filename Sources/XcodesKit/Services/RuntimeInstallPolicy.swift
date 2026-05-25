@@ -1,11 +1,15 @@
 import Foundation
 @preconcurrency import Version
 
+/// The mechanism to use when installing a simulator runtime.
 public enum RuntimeInstallMethod: Equatable, Sendable {
+    /// Install a downloaded archive directly.
     case archive
+    /// Install through `xcodebuild`, optionally constrained to an architecture.
     case xcodebuild(architecture: String?)
 }
 
+/// Errors produced while choosing a runtime installation method.
 public enum RuntimeInstallPolicyError: LocalizedError, Equatable, Sendable {
     case noSelectedXcode
     case xcode16_1OrGreaterRequired(Version)
@@ -23,9 +27,11 @@ public enum RuntimeInstallPolicyError: LocalizedError, Equatable, Sendable {
     }
 }
 
+/// Chooses the correct simulator runtime installation method for the selected Xcode.
 public struct RuntimeInstallPolicy: Sendable {
     public init() {}
 
+    /// Returns the required install method for a runtime and selected Xcode version.
     public func installMethod(
         for runtime: DownloadableRuntime,
         selectedXcodeVersion: Version?
@@ -52,6 +58,7 @@ public struct RuntimeInstallPolicy: Sendable {
         return .xcodebuild(architecture: nil)
     }
 
+    /// Parses the selected Xcode version from `xcodebuild -version` output.
     public func selectedXcodeVersion(fromXcodebuildVersionOutput output: String) -> Version? {
         let versionPattern = #"Xcode (\d+\.\d+)"#
         guard let versionRegex = try? NSRegularExpression(pattern: versionPattern),

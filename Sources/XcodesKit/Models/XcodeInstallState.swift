@@ -8,23 +8,30 @@
 import Foundation
 @preconcurrency import Path
 
+/// The installation state of an Xcode list item.
 public enum XcodeInstallState: Equatable, Sendable {
+    /// The Xcode is available but not installed.
     case notInstalled
+    /// The Xcode is currently moving through an installation step.
     case installing(XcodeInstallationStep)
+    /// The Xcode is installed at the associated path.
     case installed(Path)
 
+    /// Whether the state is ``notInstalled``.
     public var notInstalled: Bool {
         switch self {
         case .notInstalled: return true
         default: return false
         }
     }
+    /// Whether the state is ``installing(_:)``.
     public var installing: Bool {
         switch self {
         case .installing: return true
         default: return false
         }
     }
+    /// Whether the state is ``installed(_:)``.
     public var installed: Bool {
         switch self {
         case .installed: return true
@@ -32,6 +39,7 @@ public enum XcodeInstallState: Equatable, Sendable {
         }
     }
 
+    /// The installed path when the state is ``installed(_:)``.
     public var installedPath: Path? {
         switch self {
         case .installed(let path): return path

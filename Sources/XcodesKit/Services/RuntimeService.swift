@@ -1,10 +1,17 @@
 import Foundation
 @preconcurrency import Path
 
+/// URLs used by runtime services.
 public extension URL {
+    /// Apple's downloadable simulator runtime index.
     static let downloadableRuntimes = URL(string: "https://devimages-cdn.apple.com/downloads/xcode/simulators/index2.dvtdownloadableindex")!
 }
 
+/// Lists, installs, mounts, and deletes simulator runtimes.
+///
+/// The default initializer uses `URLSession`, `xcodebuild`, `simctl`, `hdiutil`, and package tools
+/// through ``XcodesShell``. The dependency-injecting initializer is intended for tests and apps that
+/// want to wrap those operations.
 public struct RuntimeService: Sendable {
     public typealias LoadData = @Sendable (URLRequest) async throws -> (Data, URLResponse)
     public typealias ContentsAtPath = @Sendable (String) -> Data?
@@ -25,11 +32,13 @@ public struct RuntimeService: Sendable {
     private var installPkgOutput: InstallPackageOutput
     private var deleteRuntimeOutput: DeleteRuntimeOutput
 
+    /// Runtime service errors.
     public enum Error: LocalizedError, Equatable, Sendable {
         case unavailableRuntime(String)
         case failedMountingDMG
     }
 
+    /// Creates a runtime service backed by a URL session and the default shell commands.
     public init(urlSession: URLSession = URLSession(configuration: .ephemeral)) {
         let shell = XcodesShell()
         self.init(
@@ -46,6 +55,7 @@ public struct RuntimeService: Sendable {
         )
     }
 
+    /// Creates a runtime service with injected network, filesystem, and shell behavior.
     public init(
         loadData: @escaping LoadData,
         contentsAtPath: @escaping ContentsAtPath = { path in FileManager.default.contents(atPath: path) },
@@ -70,6 +80,7 @@ public struct RuntimeService: Sendable {
         self.deleteRuntimeOutput = deleteRuntimeOutput
     }
     
+    /// Loads Apple's downloadable simulator runtime index.
     public func downloadableRuntimes() async throws -> DownloadableRuntimesResponse {
         let urlRequest = URLRequest(url: .downloadableRuntimes)
         
@@ -78,6 +89,7 @@ public struct RuntimeService: Sendable {
         return try PropertyListDecoder().decode(DownloadableRuntimesResponse.self, from: data)
     }
     
+    /// Lists runtimes installed for the currently selected Xcode using `simctl`.
     public func installedRuntimes() async throws -> [InstalledRuntime] {
         // This only uses the Selected Xcode, so we don't know what other SDK's have been installed in previous versions
         let output = try await installedRuntimesOutput()
@@ -105,10 +117,12 @@ public struct RuntimeService: Sendable {
         }
     }
     
+    /// Installs a runtime disk image with `xcodebuild`.
     public func installRuntimeImage(dmgURL: URL) async throws {
         _ = try await installRuntimeImageOutput(dmgURL)
     }
     
+    /// Mounts a disk image and returns its mount point.
     public func mountDMG(dmgUrl: URL) async throws -> URL {
         let resultPlist = try await mountDMGOutput(dmgUrl)
         
@@ -120,22 +134,27 @@ public struct RuntimeService: Sendable {
         return URL(fileURLWithPath: path)
     }
     
+    /// Unmounts a mounted disk image.
     public func unmountDMG(mountedURL: URL) async throws {
         _ = try await unmountDMGOutput(mountedURL)
     }
     
+    /// Expands a package into a directory.
     public func expand(pkgPath: Path, expandedPkgPath: Path) async throws {
         _ = try await expandPkgOutput(pkgPath.url, expandedPkgPath.url)
     }
     
+    /// Recreates a package from an expanded package directory.
     public func createPkg(pkgPath: Path, expandedPkgPath: Path) async throws {
         _ = try await createPkgOutput(pkgPath.url, expandedPkgPath.url)
     }
     
+    /// Installs a package to the provided target path.
     public func installPkg(pkgPath: Path, expandedPkgPath: Path) async throws {
         _ = try await installPkgOutput(pkgPath.url, expandedPkgPath.url.absoluteString)
     }
     
+    /// Deletes an installed simulator runtime by identifier.
     public func deleteRuntime(identifier: String) async throws {
         do {
             _ = try await deleteRuntimeOutput(identifier)

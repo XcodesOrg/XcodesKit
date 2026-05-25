@@ -2,7 +2,9 @@ import Foundation
 @preconcurrency import Path
 @preconcurrency import Version
 
+/// Converts Xcode models into lightweight rows for command-line or app presentation.
 public struct XcodeListPresentationService: Sendable {
+    /// A display row for an available Xcode release.
     public struct AvailableRow: Equatable, Sendable {
         public let version: Version
         public let versionDescription: String
@@ -11,6 +13,7 @@ public struct XcodeListPresentationService: Sendable {
         public let isSelected: Bool
     }
 
+    /// A display row for an installed Xcode bundle.
     public struct InstalledRow: Equatable, Sendable {
         public let version: Version
         public let versionDescription: String
@@ -21,6 +24,7 @@ public struct XcodeListPresentationService: Sendable {
 
     public init() {}
 
+    /// Builds available-version rows, including installed and selected flags.
     public func availableRows(
         availableXcodes: [AvailableXcode],
         installedXcodes: [InstalledXcode],
@@ -95,6 +99,7 @@ public struct XcodeListPresentationService: Sendable {
             }
     }
 
+    /// Builds installed-version rows sorted by version.
     public func installedRows(
         installedXcodes: [InstalledXcode],
         selectedXcodePath: String?
@@ -112,6 +117,7 @@ public struct XcodeListPresentationService: Sendable {
             }
     }
 
+    /// Formats installed rows as aligned display lines.
     public func installedLines(
         rows: [InstalledRow],
         interactive: Bool,
@@ -135,6 +141,7 @@ public struct XcodeListPresentationService: Sendable {
         }
     }
 
+    /// Finds the installed Xcode whose path matches the selected developer directory path.
     public static func selectedInstalledXcode(
         in installedXcodes: [InstalledXcode],
         selectedXcodePath: String?

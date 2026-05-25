@@ -1,6 +1,7 @@
 import Foundation
 @preconcurrency import Path
 
+/// Filesystem errors produced while selecting an Xcode.
 public enum XcodeSelectionFilesystemError: LocalizedError, Equatable, Sendable {
     case destinationExistsAndIsNotSymlink(Path)
 
@@ -12,6 +13,7 @@ public enum XcodeSelectionFilesystemError: LocalizedError, Equatable, Sendable {
     }
 }
 
+/// Performs filesystem changes required to make an installed Xcode the selected app bundle.
 public struct XcodeSelectionFilesystemService: Sendable {
     public typealias FileExists = @Sendable (String) -> Bool
     public typealias AttributesOfItem = @Sendable (String) throws -> [FileAttributeKey: Any]
@@ -20,8 +22,11 @@ public struct XcodeSelectionFilesystemService: Sendable {
     public typealias InstalledXcodeAtPath = @Sendable (Path) -> InstalledXcode?
     public typealias Rename = @Sendable (Path, String) throws -> Path
 
+    /// The result of creating a selection symbolic link.
     public struct SymbolicLinkResult: Equatable, Sendable {
+        /// The path where the symbolic link was created.
         public let destinationPath: Path
+        /// Whether an existing symbolic link was replaced.
         public let replacedExistingSymlink: Bool
     }
 
@@ -32,6 +37,7 @@ public struct XcodeSelectionFilesystemService: Sendable {
     private let installedXcode: InstalledXcodeAtPath
     private let rename: Rename
 
+    /// Creates a service with injectable filesystem operations.
     public init(
         fileExists: @escaping FileExists = { path in FileManager.default.fileExists(atPath: path) },
         attributesOfItem: @escaping AttributesOfItem = { path in try FileManager.default.attributesOfItem(atPath: path) },
@@ -50,6 +56,7 @@ public struct XcodeSelectionFilesystemService: Sendable {
         self.rename = rename
     }
 
+    /// Creates `Xcode.app` or `Xcode-Beta.app` as a symbolic link to an installed Xcode bundle.
     public func createSymbolicLink(
         to installedXcodePath: Path,
         in installDirectory: Path,
@@ -72,6 +79,7 @@ public struct XcodeSelectionFilesystemService: Sendable {
         return SymbolicLinkResult(destinationPath: destinationPath, replacedExistingSymlink: replacedExistingSymlink)
     }
 
+    /// Renames an installed Xcode bundle to `Xcode.app`, moving an existing `Xcode.app` aside first.
     public func renameForSelection(
         installedXcodePath: Path,
         in installDirectory: Path

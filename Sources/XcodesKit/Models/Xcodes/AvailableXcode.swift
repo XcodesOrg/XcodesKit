@@ -3,25 +3,38 @@ import Foundation
 
 /// A version of Xcode that's available for installation.
 public struct AvailableXcode: Codable, Equatable, Sendable {
+    /// The release version, including prerelease and build metadata when known.
     public var version: Version {
         xcodeID.version
     }
 
+    /// The download URL for the release archive.
     public let url: URL
+    /// The archive filename.
     public let filename: String
+    /// The release date, when provided by the data source.
     public let releaseDate: Date?
+    /// The minimum macOS version required to run this Xcode, when known.
     public let requiredMacOSVersion: String?
+    /// The URL for the release notes, when known.
     public let releaseNotesURL: URL?
+    /// SDK metadata included in the release.
     public let sdks: SDKs?
+    /// Compiler metadata included in the release.
     public let compilers: Compilers?
+    /// The download size in bytes, when known.
     public let fileSize: Int64?
+    /// The supported host architectures for this archive, when known.
     public let architectures: [Architecture]?
+    /// The stable identity for this release and architecture combination.
     public var xcodeID: XcodeID
 
+    /// The path component of the download URL.
     public var downloadPath: String {
         url.path
     }
 
+    /// Creates an available Xcode from release metadata fields.
     public init(
         version: Version,
         url: URL,
@@ -46,6 +59,7 @@ public struct AvailableXcode: Codable, Equatable, Sendable {
         self.xcodeID = XcodeID(version: version, architectures: architectures)
     }
 
+    /// Creates an available Xcode from a source-neutral release.
     public init(release: AvailableXcodeRelease) {
         self.init(
             version: release.version,
@@ -61,6 +75,7 @@ public struct AvailableXcode: Codable, Equatable, Sendable {
         )
     }
 
+    /// Creates an available Xcode from archive metadata.
     public init(_ archive: XcodeArchive) {
         self.init(
             version: archive.version,
@@ -72,6 +87,7 @@ public struct AvailableXcode: Codable, Equatable, Sendable {
 }
 
 public extension XcodeArchive {
+    /// Creates archive metadata from an available Xcode.
     init(_ xcode: AvailableXcode) {
         self.init(
             version: xcode.version,
@@ -91,11 +107,13 @@ public extension Array where Element == AvailableXcode {
         XcodeVersionMatcher.find(version: version, in: self, versionKeyPath: \AvailableXcode.version)
     }
 
+    /// Returns Xcodes that include at least one of the requested architectures.
     func matchingArchitectures(_ architectures: [Architecture]) -> [AvailableXcode] {
         guard !architectures.isEmpty else { return self }
         return filter { $0.architectures?.containsAny(architectures) == true }
     }
 
+    /// Returns Xcodes that match all requested architecture filters.
     func matchingArchitectureFilters(_ filters: [ArchitectureFilter]) -> [AvailableXcode] {
         guard !filters.isEmpty else { return self }
         return filter { filters.matches($0.architectures) }

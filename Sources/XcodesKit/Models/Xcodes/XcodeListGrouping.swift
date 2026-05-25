@@ -1,12 +1,17 @@
 import Foundation
 @preconcurrency import Version
 
+/// Version categories used to filter Xcode lists.
 public enum XcodeListVersionFilter: Equatable, Sendable {
+    /// Include releases and prereleases.
     case all
+    /// Include only stable releases.
     case release
+    /// Include only prereleases.
     case prerelease
 }
 
+/// Filtering options for composed Xcode list items.
 public struct XcodeListFilters: Equatable, Sendable {
     public let versionFilter: XcodeListVersionFilter
     public let architectureFilters: [ArchitectureFilter]
@@ -29,6 +34,7 @@ public struct XcodeListFilters: Equatable, Sendable {
     }
 }
 
+/// Xcode list items grouped by major and minor version.
 public struct XcodeMinorVersionGroup: Identifiable, Sendable {
     public let majorVersion: Int
     public let minorVersion: Int
@@ -65,6 +71,7 @@ public struct XcodeMinorVersionGroup: Identifiable, Sendable {
     }
 }
 
+/// Xcode list items grouped by major version.
 public struct XcodeMajorVersionGroup: Identifiable, Sendable {
     public let majorVersion: Int
     public let minorVersionGroups: [XcodeMinorVersionGroup]
@@ -103,6 +110,7 @@ public struct XcodeMajorVersionGroup: Identifiable, Sendable {
     }
 }
 
+/// Arbitrary elements grouped by the major and minor version of an associated Xcode list item.
 public struct XcodeListElementMinorVersionGroup<Element>: Identifiable {
     public let majorVersion: Int
     public let minorVersion: Int
@@ -123,6 +131,7 @@ public struct XcodeListElementMinorVersionGroup<Element>: Identifiable {
     }
 }
 
+/// Arbitrary elements grouped by the major version of an associated Xcode list item.
 public struct XcodeListElementMajorVersionGroup<Element>: Identifiable {
     public let majorVersion: Int
     public let minorVersionGroups: [XcodeListElementMinorVersionGroup<Element>]
@@ -146,6 +155,7 @@ public struct XcodeListElementMajorVersionGroup<Element>: Identifiable {
 }
 
 public extension Array {
+    /// Applies Xcode list filters to arbitrary elements using a derived list item.
     func applying(_ filters: XcodeListFilters, item: (Element) -> XcodeListItem) -> [Element] {
         let filteredItems = map { element in
             XcodeListFilteredElement(element: element, item: item(element))
@@ -155,6 +165,7 @@ public extension Array {
         return filteredItems.map(\.element)
     }
 
+    /// Groups arbitrary elements by the major version of a derived Xcode list item.
     func groupedByMajorVersion(item: (Element) -> XcodeListItem) -> [XcodeListElementMajorVersionGroup<Element>] {
         Dictionary(grouping: self, by: { item($0).version.major })
             .map { majorVersion, elements in
@@ -178,6 +189,7 @@ public extension Array {
 }
 
 public extension Array where Element == XcodeListItem {
+    /// Applies filters to Xcode list items.
     func applying(_ filters: XcodeListFilters) -> [XcodeListItem] {
         var items = self
 
@@ -209,6 +221,7 @@ public extension Array where Element == XcodeListItem {
         return items
     }
 
+    /// Groups Xcode list items by major version, then minor version.
     func groupedByMajorVersion() -> [XcodeMajorVersionGroup] {
         Dictionary(grouping: self, by: { $0.version.major })
             .map { majorVersion, xcodes in
@@ -230,6 +243,7 @@ public extension Array where Element == XcodeListItem {
             .sorted { $0.majorVersion > $1.majorVersion }
     }
 
+    /// Hides older uninstalled major versions while keeping installed versions visible.
     func filteringUninstalledVersions(allowedMajorVersions: Int) -> [XcodeListItem] {
         guard
             let latestMajor = sorted(by: { $0.version < $1.version })
@@ -248,6 +262,7 @@ public extension Array where Element == XcodeListItem {
         }
     }
 
+    /// The newest stable release in the array.
     var latestRelease: XcodeListItem? {
         filter { $0.version.isNotPrerelease }
             .sorted { $0.version < $1.version }

@@ -2,6 +2,7 @@ import Foundation
 @preconcurrency import Path
 @preconcurrency import Version
 
+/// Errors produced while resolving an installed Xcode selection.
 public enum XcodeSelectionError: LocalizedError, Equatable, Sendable {
     case invalidIndex(min: Int, max: Int, given: String?)
 
@@ -13,20 +14,28 @@ public enum XcodeSelectionError: LocalizedError, Equatable, Sendable {
     }
 }
 
+/// A resolved selection action for an installed Xcode path or version.
 public enum XcodeSelectionRequest: Equatable, Sendable {
+    /// The requested version is already selected.
     case alreadySelectedVersion(Version)
+    /// The requested path is already selected.
     case alreadySelectedPath(String)
+    /// Select a known installed Xcode.
     case selectInstalledXcode(InstalledXcode)
+    /// Select a path that may not be represented by the installed Xcode list.
     case selectPath(String)
 }
 
+/// Resolves user input into Xcode selection actions.
 public struct XcodeSelectionService: Sendable {
     private let versionFile: XcodeVersionFileService
 
+    /// Creates a service that can optionally read `.xcode-version` files.
     public init(versionFile: XcodeVersionFileService = XcodeVersionFileService()) {
         self.versionFile = versionFile
     }
 
+    /// Resolves a path, version string, or `.xcode-version` file into a selection request.
     public func request(
         pathOrVersion: String,
         installedXcodes: [InstalledXcode],
@@ -61,6 +70,7 @@ public struct XcodeSelectionService: Sendable {
         return .selectPath(pathToSelect)
     }
 
+    /// Returns the installed Xcode selected by a one-based display index.
     public func installedXcode(
         fromSelection selection: String?,
         installedXcodes: [InstalledXcode]

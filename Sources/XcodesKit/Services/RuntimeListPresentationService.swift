@@ -1,7 +1,9 @@
 import Foundation
 @preconcurrency import Version
 
+/// Converts downloadable and installed runtime models into display rows.
 public struct RuntimeListPresentationService: Sendable {
+    /// A display row for a simulator runtime.
     public struct RuntimeRow: Sendable {
         public let platform: DownloadableRuntime.Platform
         public let betaNumber: Int?
@@ -11,10 +13,12 @@ public struct RuntimeListPresentationService: Sendable {
         public var hasDuplicateVersion: Bool
         public let architectures: [Architecture]?
 
+        /// The OS version plus beta suffix when this is a beta runtime.
         public var completeVersion: String {
             makeRuntimeVersion(for: version, betaNumber: betaNumber)
         }
 
+        /// A human-readable identifier with an architecture suffix when applicable.
         public var visibleIdentifier: String {
             platform.shortName + " " + completeVersion + (architectures?.listOutputSuffix ?? "")
         }
@@ -40,6 +44,7 @@ public struct RuntimeListPresentationService: Sendable {
 
     public init() {}
 
+    /// Builds grouped display rows from a full downloadable-runtime response.
     public func rows(
         downloadableRuntimes: DownloadableRuntimesResponse,
         installedRuntimes: [InstalledRuntime],
@@ -55,6 +60,7 @@ public struct RuntimeListPresentationService: Sendable {
         )
     }
 
+    /// Builds grouped display rows from downloadable and installed runtime lists.
     public func rows(
         downloadableRuntimes: [DownloadableRuntime],
         installedRuntimes: [InstalledRuntime],
@@ -107,6 +113,7 @@ public struct RuntimeListPresentationService: Sendable {
             }
     }
 
+    /// Formats a runtime row as a display line.
     public func line(for row: RuntimeRow) -> String {
         var string = row.visibleIdentifier
         if row.hasDuplicateVersion {
@@ -134,6 +141,7 @@ public struct RuntimeListPresentationService: Sendable {
 }
 
 public extension DownloadableRuntimesResponse {
+    /// Returns downloadable runtimes enriched with SDK build update mappings.
     func downloadablesWithSDKBuildUpdates() -> [DownloadableRuntime] {
         downloadables.map { runtime in
             var updatedRuntime = runtime

@@ -2,19 +2,29 @@ import Foundation
 @preconcurrency import Path
 @preconcurrency import Version
 
+/// A user-facing request to install or download Xcode.
 public enum XcodeInstallRequest: Equatable, Sendable {
+    /// Resolve the newest stable release.
     case latest
+    /// Resolve the newest prerelease by release date.
     case latestPrerelease
+    /// Use a specific available Xcode object.
     case availableXcode(AvailableXcode)
+    /// Resolve a version string, or fall back to `.xcode-version` when the string is empty.
     case version(String)
+    /// Install from a local archive at a known path.
     case path(versionString: String, path: Path)
 }
 
+/// The resolved source for an Xcode install or download request.
 public enum XcodeInstallResolution: Equatable, Sendable {
+    /// Download the requested version, optionally with a fully resolved available Xcode.
     case download(version: Version, resolvedXcode: AvailableXcode?)
+    /// Install from a local archive URL.
     case localArchive(AvailableXcode, URL)
 }
 
+/// Errors produced while resolving an Xcode install request.
 public enum XcodeInstallResolutionError: LocalizedError, Equatable, Sendable {
     case invalidVersion(String)
     case noReleaseVersionAvailable
@@ -35,13 +45,18 @@ public enum XcodeInstallResolutionError: LocalizedError, Equatable, Sendable {
     }
 }
 
+/// Resolves install requests against available releases and installed Xcodes.
 public struct XcodeInstallResolutionService: Sendable {
     private let versionFile: XcodeVersionFileService
 
+    /// Creates a resolver that can optionally read `.xcode-version` files.
     public init(versionFile: XcodeVersionFileService = XcodeVersionFileService()) {
         self.versionFile = versionFile
     }
 
+    /// Resolves a request into a concrete download or local archive action.
+    ///
+    /// When `willInstall` is true, the resolver rejects versions that are already installed.
     public func resolve(
         _ request: XcodeInstallRequest,
         availableXcodes: [AvailableXcode],
@@ -85,6 +100,7 @@ public struct XcodeInstallResolutionService: Sendable {
         }
     }
 
+    /// Returns the newest non-prerelease Xcode in the available list.
     public func latestRelease(in availableXcodes: [AvailableXcode]) -> AvailableXcode? {
         availableXcodes
             .filter(\.version.isNotPrerelease)
@@ -92,6 +108,7 @@ public struct XcodeInstallResolutionService: Sendable {
             .last
     }
 
+    /// Returns the newest prerelease Xcode by release date.
     public func latestPrerelease(in availableXcodes: [AvailableXcode]) -> AvailableXcode? {
         availableXcodes
             .filter { $0.version.isPrerelease }

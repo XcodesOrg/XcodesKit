@@ -4,10 +4,14 @@ import Foundation
 
 /// A version of Xcode that's already installed.
 public struct InstalledXcode: Equatable, Sendable {
+    /// Loads file data at a path.
     public typealias ContentsAtPath = @Sendable (String) -> Data?
+    /// Loads the architectures supported by an Xcode executable.
     public typealias LoadArchitectures = @Sendable (URL) throws -> ProcessOutput
 
+    /// The path to the Xcode app bundle.
     public let path: Path
+    /// The stable identity for this installed Xcode and architecture combination.
     public let xcodeID: XcodeID
 
     /// Composed of the bundle short version from Info.plist and the product build version from version.plist.
@@ -15,11 +19,13 @@ public struct InstalledXcode: Equatable, Sendable {
         xcodeID.version
     }
 
+    /// Creates an installed Xcode from known metadata.
     public init(path: Path, version: Version, architectures: [Architecture]? = nil) {
         self.path = path
         self.xcodeID = XcodeID(version: version, architectures: architectures)
     }
 
+    /// Attempts to load installed Xcode metadata from an app bundle path.
     public init?(path: Path) {
         self.init(
             path: path,
@@ -28,6 +34,7 @@ public struct InstalledXcode: Equatable, Sendable {
         )
     }
 
+    /// Attempts to load installed Xcode metadata with injected file and architecture readers.
     public init?(
         path: Path,
         contentsAtPath: ContentsAtPath,
