@@ -220,14 +220,9 @@ public struct XcodeListService: Sendable {
                 $0.version.buildMetadataIdentifiers == availableXcode.version.buildMetadataIdentifiers
             }
 
-            let releaseWithSameBuildAndArchitecture = availableXcodesWithIdenticalBuildIdentifiers.contains {
-                $0.version.prereleaseIdentifiers.isEmpty &&
-                    $0.architectures == availableXcode.architectures
-            }
-
             return availableXcodesWithIdenticalBuildIdentifiers.count == 1 ||
                 availableXcodesWithIdenticalBuildIdentifiers.count > 1 &&
-                (availableXcode.version.prereleaseIdentifiers.isEmpty || !releaseWithSameBuildAndArchitecture)
+                (availableXcode.version.prereleaseIdentifiers.isEmpty || availableXcode.architectures?.isEmpty == false)
         }
     }
 

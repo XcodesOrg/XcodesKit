@@ -45,7 +45,7 @@ public struct XcodeListPresentationService: Sendable {
             )
             : availableXcodes)
             .matchingArchitectureFilters(architectures)
-        let visibleAvailableXcodes = XcodeListService.filteringPrereleasesWithDuplicateBuildMetadata(adjustedAvailableXcodes)
+        let visibleAvailableXcodes = Self.filteringPrereleasesWithReleaseMatchingBuildAndArchitecture(adjustedAvailableXcodes)
 
         let adjustedInstalledXcodes = architectures.isEmpty
             ? installedXcodes
@@ -148,5 +148,19 @@ public struct XcodeListPresentationService: Sendable {
     ) -> InstalledXcode? {
         guard let selectedXcodePath else { return nil }
         return installedXcodes.first { selectedXcodePath.hasPrefix($0.path.string) }
+    }
+
+    static func filteringPrereleasesWithReleaseMatchingBuildAndArchitecture(_ xcodes: [AvailableXcode]) -> [AvailableXcode] {
+        xcodes.filter { availableXcode in
+            let releaseWithSameBuildAndArchitecture = xcodes.contains {
+                $0.version.buildMetadataIdentifiers == availableXcode.version.buildMetadataIdentifiers &&
+                    $0.version.prereleaseIdentifiers.isEmpty &&
+                    $0.architectures == availableXcode.architectures
+            }
+
+            return availableXcode.version.prereleaseIdentifiers.isEmpty ||
+                availableXcode.version.buildMetadataIdentifiers.isEmpty ||
+                !releaseWithSameBuildAndArchitecture
+        }
     }
 }
