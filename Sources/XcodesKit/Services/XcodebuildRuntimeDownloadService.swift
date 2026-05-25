@@ -34,8 +34,13 @@ public struct XcodebuildRuntimeDownloadService: Sendable {
             outputHandler: { string, progress in
                 progress.updateFromXcodebuild(text: string)
             },
-            failureHandler: { process in
-                ProcessExecutionError(process: process, standardOutput: "", standardError: "")
+            failureHandler: { process, stdout, stderr in
+                ProcessExecutionError(
+                    process: process,
+                    terminationStatus: process.terminationStatus,
+                    standardOutput: stdout,
+                    standardError: stderr
+                )
             }
         ).stream()
     }

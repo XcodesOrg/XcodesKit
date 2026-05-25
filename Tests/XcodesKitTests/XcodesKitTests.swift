@@ -2041,7 +2041,7 @@ final class XcodesKitTests: XCTestCase {
                 collector.append(string)
                 progress.updateFromXcodebuild(text: string)
             },
-            failureHandler: { process in
+            failureHandler: { process, _, _ in
                 ProcessExecutionError(process: process, standardOutput: "", standardError: "")
             }
         ).stream()
@@ -2074,7 +2074,7 @@ final class XcodesKitTests: XCTestCase {
             outputHandler: { string, _ in
                 collector.append(string)
             },
-            failureHandler: { process in
+            failureHandler: { process, _, _ in
                 ProcessExecutionError(process: process, standardOutput: "", standardError: "")
             }
         ).stream()
@@ -2087,19 +2087,19 @@ final class XcodesKitTests: XCTestCase {
 
     func testProcessProgressStreamRunnerThrowsFailureHandlerError() async {
         enum TestError: Error, Equatable {
-            case failed(Int32)
+            case failed(Int32, String, String)
         }
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = ["-c", "exit 12"]
+        process.arguments = ["-c", "printf 'stdout text'; printf 'stderr text' >&2; exit 12"]
 
         let stream = ProcessProgressStreamRunner(
             process: process,
             progress: Progress(),
             outputHandler: { _, _ in },
-            failureHandler: { process in
-                TestError.failed(process.terminationStatus)
+            failureHandler: { process, stdout, stderr in
+                TestError.failed(process.terminationStatus, stdout, stderr)
             }
         ).stream()
 
@@ -2107,7 +2107,7 @@ final class XcodesKitTests: XCTestCase {
             for try await _ in stream {}
             XCTFail("Expected process failure to throw")
         } catch {
-            XCTAssertEqual(error as? TestError, .failed(12))
+            XCTAssertEqual(error as? TestError, .failed(12, "stdout text", "stderr text"))
         }
     }
 

@@ -38,11 +38,16 @@ public struct Aria2DownloadService: Sendable {
 
                 progress.updateFromAria2(string: string)
             },
-            failureHandler: { process in
+            failureHandler: { process, stdout, stderr in
                 if let aria2cError = Aria2CError(exitStatus: process.terminationStatus) {
                     return aria2cError
                 } else {
-                    return ProcessExecutionError(process: process, standardOutput: "", standardError: "")
+                    return ProcessExecutionError(
+                        process: process,
+                        terminationStatus: process.terminationStatus,
+                        standardOutput: stdout,
+                        standardError: stderr
+                    )
                 }
             },
             successHandler: {
