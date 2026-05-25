@@ -3,7 +3,7 @@ import os
 
 final class ProcessProgressStreamRunner: Sendable {
     typealias OutputHandler = @Sendable (String, Progress) -> Void
-    typealias FailureHandler = @Sendable (Process) -> Error
+    typealias FailureHandler = @Sendable (Process, String, String) -> Error
     typealias SuccessHandler = @Sendable () -> Error?
 
     private let process: Process
@@ -54,20 +54,21 @@ final class ProcessProgressStreamRunner: Sendable {
         let stdErrPipe = Pipe()
         process.standardError = stdErrPipe
 
-        let handleData: @Sendable (FileHandle) -> Void = { [weak self] handle in
+        let handleData: @Sendable (FileHandle, OutputStream) -> Void = { [weak self] handle, stream in
             guard let self else { return }
             let data = handle.availableData
             guard data.isEmpty == false else { return }
 
             let string = String(decoding: data, as: UTF8.self)
             self.continuation.withLock {
+                self.append(data, to: stream)
                 self.outputHandler(string, self.progress)
                 _ = $0?.yield(self.progress)
             }
         }
 
-        stdOutPipe.fileHandleForReading.readabilityHandler = handleData
-        stdErrPipe.fileHandleForReading.readabilityHandler = handleData
+        stdOutPipe.fileHandleForReading.readabilityHandler = { handleData($0, .stdout) }
+        stdErrPipe.fileHandleForReading.readabilityHandler = { handleData($0, .stderr) }
 
         process.terminationHandler = { [weak self] process in
             self?.finish(process: process)
@@ -95,7 +96,8 @@ final class ProcessProgressStreamRunner: Sendable {
         consumeRemainingOutput()
 
         guard process.terminationReason == .exit, process.terminationStatus == 0 else {
-            finish(throwing: failureHandler(process))
+            let output = output()
+            finish(throwing: failureHandler(process, output.stdout, output.stderr))
             return
         }
 
@@ -126,11 +128,11 @@ final class ProcessProgressStreamRunner: Sendable {
     }
 
     private func consumeRemainingOutput() {
-        consumeRemainingOutput(from: process.standardOutput as? Pipe)
-        consumeRemainingOutput(from: process.standardError as? Pipe)
+        consumeRemainingOutput(from: process.standardOutput as? Pipe, stream: .stdout)
+        consumeRemainingOutput(from: process.standardError as? Pipe, stream: .stderr)
     }
 
-    private func consumeRemainingOutput(from pipe: Pipe?) {
+    private func consumeRemainingOutput(from pipe: Pipe?, stream: OutputStream) {
         guard let pipe else { return }
 
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
@@ -138,8 +140,41 @@ final class ProcessProgressStreamRunner: Sendable {
 
         let string = String(decoding: data, as: UTF8.self)
         continuation.withLock {
+            append(data, to: stream)
             outputHandler(string, progress)
             _ = $0?.yield(progress)
         }
+    }
+
+    private let capturedOutput = OSAllocatedUnfairLock<OutputStorage>(initialState: OutputStorage())
+
+    private func append(_ data: Data, to stream: OutputStream) {
+        capturedOutput.withLock {
+            switch stream {
+            case .stdout:
+                $0.stdout.append(data)
+            case .stderr:
+                $0.stderr.append(data)
+            }
+        }
+    }
+
+    private func output() -> (stdout: String, stderr: String) {
+        capturedOutput.withLock {
+            (
+                String(data: $0.stdout, encoding: .utf8) ?? "",
+                String(data: $0.stderr, encoding: .utf8) ?? ""
+            )
+        }
+    }
+
+    private enum OutputStream {
+        case stdout
+        case stderr
+    }
+
+    private struct OutputStorage: Sendable {
+        var stdout = Data()
+        var stderr = Data()
     }
 }
