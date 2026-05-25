@@ -205,7 +205,8 @@ public struct XcodeListService: Sendable {
         let prereleaseAvailableXcodesWithIdenticalBuildIdentifiers = xcodes.filter {
             $0.version.buildMetadataIdentifiers == xcode.version.buildMetadataIdentifiers &&
                 !$0.version.prereleaseIdentifiers.isEmpty &&
-                !$0.version.buildMetadataIdentifiers.isEmpty
+                !$0.version.buildMetadataIdentifiers.isEmpty &&
+                $0.architectures == xcode.architectures
         }
 
         guard !prereleaseAvailableXcodesWithIdenticalBuildIdentifiers.isEmpty,

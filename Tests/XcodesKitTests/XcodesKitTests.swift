@@ -1102,6 +1102,52 @@ final class XcodesKitTests: XCTestCase {
         ])
     }
 
+    func testXcodeListServiceFiltersIdenticalBuildsToMatchingArchitectureVariant() throws {
+        let universalRelease = AvailableXcode(
+            version: try XCTUnwrap(Version("26.5.0+17F42")),
+            url: try XCTUnwrap(URL(string: "https://apple.com/xcode-universal.xip")),
+            filename: "mock-universal.xip",
+            releaseDate: nil,
+            architectures: [.arm64, .x86_64]
+        )
+        let appleSiliconRelease = AvailableXcode(
+            version: try XCTUnwrap(Version("26.5.0+17F42")),
+            url: try XCTUnwrap(URL(string: "https://apple.com/xcode-arm64.xip")),
+            filename: "mock-arm64.xip",
+            releaseDate: nil,
+            architectures: [.arm64]
+        )
+        let universalPrerelease = AvailableXcode(
+            version: try XCTUnwrap(Version("26.5.0-Release.Candidate+17F42")),
+            url: try XCTUnwrap(URL(string: "https://apple.com/xcode-rc-universal.xip")),
+            filename: "mock-rc-universal.xip",
+            releaseDate: nil,
+            architectures: [.arm64, .x86_64]
+        )
+        let appleSiliconPrerelease = AvailableXcode(
+            version: try XCTUnwrap(Version("26.5.0-Release.Candidate+17F42")),
+            url: try XCTUnwrap(URL(string: "https://apple.com/xcode-rc-arm64.xip")),
+            filename: "mock-rc-arm64.xip",
+            releaseDate: nil,
+            architectures: [.arm64]
+        )
+        let xcodes = [
+            universalRelease,
+            appleSiliconRelease,
+            universalPrerelease,
+            appleSiliconPrerelease
+        ]
+
+        XCTAssertEqual(XcodeListService.identicalBuildIDs(for: universalRelease, in: xcodes), [
+            universalRelease.xcodeID,
+            universalPrerelease.xcodeID
+        ])
+        XCTAssertEqual(XcodeListService.identicalBuildIDs(for: appleSiliconRelease, in: xcodes), [
+            appleSiliconRelease.xcodeID,
+            appleSiliconPrerelease.xcodeID
+        ])
+    }
+
     func testXcodeListServiceValidatesDeveloperDownloads() async throws {
         let downloads = Downloads(
             resultCode: 0,
