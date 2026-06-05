@@ -167,7 +167,9 @@ public extension Array {
 
     /// Groups arbitrary elements by the major version of a derived Xcode list item.
     func groupedByMajorVersion(item: (Element) -> XcodeListItem) -> [XcodeListElementMajorVersionGroup<Element>] {
-        Dictionary(grouping: self, by: { item($0).version.major })
+        let visibleElements = hidingOlderIdenticalBuilds(item: item)
+
+        return Dictionary(grouping: visibleElements, by: { item($0).version.major })
             .map { majorVersion, elements in
                 let minorVersionGroups = Dictionary(grouping: elements, by: { item($0).version.minor })
                     .map { minorVersion, minorElements in
@@ -223,7 +225,9 @@ public extension Array where Element == XcodeListItem {
 
     /// Groups Xcode list items by major version, then minor version.
     func groupedByMajorVersion() -> [XcodeMajorVersionGroup] {
-        Dictionary(grouping: self, by: { $0.version.major })
+        let visibleItems = hidingOlderIdenticalBuilds(item: { $0 })
+
+        return Dictionary(grouping: visibleItems, by: { $0.version.major })
             .map { majorVersion, xcodes in
                 let minorVersionGroups = Dictionary(grouping: xcodes, by: { $0.version.minor })
                     .map { minorVersion, minorXcodes in
@@ -273,6 +277,30 @@ public extension Array where Element == XcodeListItem {
 private struct XcodeListFilteredElement<Element> {
     let element: Element
     let item: XcodeListItem
+}
+
+private extension Array {
+    func hidingOlderIdenticalBuilds(item: (Element) -> XcodeListItem) -> [Element] {
+        let items = map(item)
+        let visibleIDs = Set(items.map(\.id))
+        let identicalBuildGroups = items
+            .map(\.identicalBuilds)
+            .filter { $0.isEmpty == false }
+
+        return filter { element in
+            let currentID = item(element).id
+
+            return identicalBuildGroups.contains { identicalBuilds in
+                guard identicalBuilds.contains(currentID) else { return false }
+
+                return identicalBuilds.contains { identicalID in
+                    identicalID.architectures == currentID.architectures &&
+                        identicalID.version > currentID.version &&
+                        visibleIDs.contains(identicalID)
+                }
+            } == false
+        }
+    }
 }
 
 private extension Array {

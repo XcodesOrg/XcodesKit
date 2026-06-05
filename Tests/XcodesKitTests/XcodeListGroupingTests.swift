@@ -57,6 +57,44 @@ final class XcodeListGroupingTests: XCTestCase {
         XCTAssertTrue(minorGroup.hasInstalling)
     }
 
+    func testGroupedVersionsHideOlderIdenticalBuildsWhenNewerBuildIsVisible() throws {
+        let releaseID = XcodeID(version: try XCTUnwrap(Version("26.5.0+17F76")))
+        let releaseCandidateID = XcodeID(version: try XCTUnwrap(Version("26.5.0-Release.Candidate+17F76")))
+        let items = try [
+            item("26.5.0+17F76", identicalBuilds: [releaseID, releaseCandidateID]),
+            item("26.5.0-Release.Candidate+17F76")
+        ]
+
+        let versions = try XCTUnwrap(items.groupedByMajorVersion().first?.versions.map(\.version))
+
+        XCTAssertEqual(versions, [try XCTUnwrap(Version("26.5.0+17F76"))])
+    }
+
+    func testGroupedVersionsKeepOlderIdenticalBuildsWhenNewerBuildIsFilteredOut() throws {
+        let releaseID = XcodeID(version: try XCTUnwrap(Version("26.5.0+17F76")))
+        let releaseCandidateID = XcodeID(version: try XCTUnwrap(Version("26.5.0-Release.Candidate+17F76")))
+        let items = try [
+            item("26.5.0-Release.Candidate+17F76", identicalBuilds: [releaseID, releaseCandidateID])
+        ]
+
+        let versions = try XCTUnwrap(items.groupedByMajorVersion().first?.versions.map(\.version))
+
+        XCTAssertEqual(versions, [try XCTUnwrap(Version("26.5.0-Release.Candidate+17F76"))])
+    }
+
+    func testGenericGroupedVersionsHideOlderIdenticalBuildsWhenNewerBuildIsVisible() throws {
+        let releaseID = XcodeID(version: try XCTUnwrap(Version("26.5.0+17F76")))
+        let releaseCandidateID = XcodeID(version: try XCTUnwrap(Version("26.5.0-Release.Candidate+17F76")))
+        let items = try [
+            PositionedXcodeListItem(position: 0, item: item("26.5.0+17F76", identicalBuilds: [releaseID, releaseCandidateID])),
+            PositionedXcodeListItem(position: 1, item: item("26.5.0-Release.Candidate+17F76"))
+        ]
+
+        let groups = items.groupedByMajorVersion(item: \.item)
+
+        XCTAssertEqual(groups.first?.versions.map(\.position), [0])
+    }
+
     func testAppliesVersionArchitectureSearchAndInstalledFilters() throws {
         let installedPath = try XCTUnwrap(Path("/Applications/Xcode-16.0.app"))
         let items = try [
@@ -109,12 +147,14 @@ final class XcodeListGroupingTests: XCTestCase {
 
     private func item(
         _ version: String,
+        identicalBuilds: [XcodeID] = [],
         installState: XcodeInstallState = .notInstalled,
         selected: Bool = false,
         architectures: [Architecture]? = nil
     ) throws -> XcodeListItem {
         XcodeListItem(
             version: try XCTUnwrap(Version(version)),
+            identicalBuilds: identicalBuilds,
             installState: installState,
             selected: selected,
             architectures: architectures
