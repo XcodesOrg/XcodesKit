@@ -4,8 +4,8 @@ import Foundation
 public struct XcodesShell: Sendable {
     public init() {}
 
-    public var unxip: @Sendable (URL) async throws -> ProcessOutput = {
-        try await XcodesProcess.run(Path.root.usr.bin.xip, workingDirectory: $0.deletingLastPathComponent(), "--expand", $0.path)
+    public var unxip: @Sendable (URL, URL) async throws -> ProcessOutput = {
+        try await XcodesProcess.run(Path.root.usr.bin.xip, workingDirectory: $1, "--expand", $0.path)
     }
     public var spctlAssess: @Sendable (URL) async throws -> ProcessOutput = {
         try await XcodesProcess.run(Path.root.usr.sbin.spctl, "--assess", "--verbose", "--type", "execute", $0.path)
