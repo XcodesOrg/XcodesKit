@@ -2,6 +2,46 @@ import XCTest
 @testable import XcodesKit
 
 final class RuntimeDecodingTests: XCTestCase {
+    func testDownloadableRuntimesResponseDecodesAuthenticationVirtual() throws {
+        let response = try PropertyListDecoder().decode(
+            DownloadableRuntimesResponse.self,
+            from: Self.plistData(downloadablesBody: """
+            <dict>
+                <key>category</key>
+                <string>simulator</string>
+                <key>simulatorVersion</key>
+                <dict>
+                    <key>buildUpdate</key>
+                    <string>20A360</string>
+                    <key>version</key>
+                    <string>16.0</string>
+                </dict>
+                <key>source</key>
+                <string>https://example.com/iOS_16_Runtime.dmg</string>
+                <key>dictionaryVersion</key>
+                <integer>1</integer>
+                <key>contentType</key>
+                <string>diskImage</string>
+                <key>platform</key>
+                <string>com.apple.platform.iphoneos</string>
+                <key>identifier</key>
+                <string>com.apple.CoreSimulator.SimRuntime.iOS-16-0</string>
+                <key>version</key>
+                <string>16.0</string>
+                <key>fileSize</key>
+                <integer>42</integer>
+                <key>name</key>
+                <string>iOS 16.0</string>
+                <key>authentication</key>
+                <string>virtual</string>
+            </dict>
+            """)
+        )
+
+        XCTAssertEqual(response.downloadables.count, 1)
+        XCTAssertEqual(response.downloadables.first?.authentication, DownloadableRuntime.Authentication.virtual)
+    }
+
     func testDownloadableRuntimesResponseDecodesAuthenticationNone() throws {
         let response = try PropertyListDecoder().decode(
             DownloadableRuntimesResponse.self,
@@ -40,6 +80,44 @@ final class RuntimeDecodingTests: XCTestCase {
 
         XCTAssertEqual(response.downloadables.count, 1)
         XCTAssertEqual(response.downloadables.first?.authentication, DownloadableRuntime.Authentication.none)
+    }
+
+    func testDownloadableRuntimesResponseDecodesWithoutAuthentication() throws {
+        let response = try PropertyListDecoder().decode(
+            DownloadableRuntimesResponse.self,
+            from: Self.plistData(downloadablesBody: """
+            <dict>
+                <key>category</key>
+                <string>simulator</string>
+                <key>simulatorVersion</key>
+                <dict>
+                    <key>buildUpdate</key>
+                    <string>20A360</string>
+                    <key>version</key>
+                    <string>16.0</string>
+                </dict>
+                <key>source</key>
+                <string>https://example.com/iOS_16_Runtime.dmg</string>
+                <key>dictionaryVersion</key>
+                <integer>1</integer>
+                <key>contentType</key>
+                <string>diskImage</string>
+                <key>platform</key>
+                <string>com.apple.platform.iphoneos</string>
+                <key>identifier</key>
+                <string>com.apple.CoreSimulator.SimRuntime.iOS-16-0</string>
+                <key>version</key>
+                <string>16.0</string>
+                <key>fileSize</key>
+                <integer>42</integer>
+                <key>name</key>
+                <string>iOS 16.0</string>
+            </dict>
+            """)
+        )
+
+        XCTAssertEqual(response.downloadables.count, 1)
+        XCTAssertNil(response.downloadables.first?.authentication)
     }
 
     private static func plistData(downloadablesBody: String) -> Data {
