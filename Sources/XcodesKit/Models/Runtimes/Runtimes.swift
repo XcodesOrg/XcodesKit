@@ -135,6 +135,7 @@ extension DownloadableRuntime {
     /// Authentication mode required by the runtime download.
     public enum Authentication: String, Codable, Sendable {
         case virtual = "virtual"
+        case none = "none"
     }
 
     /// The downloadable content category.
