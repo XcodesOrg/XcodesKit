@@ -11,8 +11,22 @@ public struct DownloadableRuntimesResponse: Codable, Sendable {
     public let sdkToSimulatorMappings: [SDKToSimulatorMapping]
     public let sdkToSeedMappings: [SDKToSeedMapping]
     public let refreshInterval: Int
-    public let downloadables: [DownloadableRuntime]
+    @LossyArray public var downloadables: [DownloadableRuntime]
     public let version: String
+
+    public init(
+        sdkToSimulatorMappings: [SDKToSimulatorMapping],
+        sdkToSeedMappings: [SDKToSeedMapping],
+        refreshInterval: Int,
+        downloadables: [DownloadableRuntime],
+        version: String
+    ) {
+        self.sdkToSimulatorMappings = sdkToSimulatorMappings
+        self.sdkToSeedMappings = sdkToSeedMappings
+        self.refreshInterval = refreshInterval
+        self._downloadables = LossyArray(wrappedValue: downloadables)
+        self.version = version
+    }
 }
 
 /// A simulator runtime that is available to download and install.
