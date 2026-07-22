@@ -65,8 +65,14 @@ public struct XcodeSelectionFilesystemService: Sendable {
         let destinationPath = installDirectory/"Xcode\(isBeta ? "-Beta" : "").app"
         var replacedExistingSymlink = false
 
-        if fileExists(destinationPath.string) {
-            let attributes = try attributesOfItem(destinationPath.string)
+        let attributes: [FileAttributeKey: Any]?
+        do {
+            attributes = try attributesOfItem(destinationPath.string)
+        } catch let error as CocoaError where error.code == .fileReadNoSuchFile {
+            attributes = nil
+        }
+
+        if let attributes {
             if attributes[.type] as? FileAttributeType == .typeSymbolicLink {
                 try removeItem(destinationPath.string)
                 replacedExistingSymlink = true
