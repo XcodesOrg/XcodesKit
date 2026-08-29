@@ -32,7 +32,7 @@ public struct XcodeListComposer: Sendable {
                 }
                 let identicalBuilds = XcodeListService.identicalBuildIDs(for: availableXcode, in: availableXcodes)
                 let existingXcodeInstallState = existingXcodes
-                    .first { $0.id == availableXcode.xcodeID && ($0.installState.installing || $0.installState.uninstalling) }?
+                    .first { $0.id == availableXcode.xcodeID && $0.installState.installing }?
                     .installState
                 let defaultXcodeInstallState: XcodeInstallState = installedXcode.map { .installed($0.path) } ?? .notInstalled
 
