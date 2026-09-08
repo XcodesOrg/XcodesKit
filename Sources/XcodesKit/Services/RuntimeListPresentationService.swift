@@ -141,7 +141,7 @@ public struct RuntimeListPresentationService: Sendable {
 }
 
 public extension DownloadableRuntimesResponse {
-    /// Returns downloadable runtimes enriched with SDK build update mappings.
+    /// Returns downloadable runtimes enriched with SDK build and beta seed mappings.
     func downloadablesWithSDKBuildUpdates() -> [DownloadableRuntime] {
         downloadables.map { runtime in
             var updatedRuntime = runtime
@@ -149,6 +149,10 @@ public extension DownloadableRuntimesResponse {
                 $0.simulatorBuildUpdate == runtime.simulatorVersion.buildUpdate
             }
             updatedRuntime.sdkBuildUpdate = mappings.map(\.sdkBuildUpdate)
+            updatedRuntime.seedNumber = sdkToSeedMappings.first {
+                $0.buildUpdate == runtime.simulatorVersion.buildUpdate &&
+                $0.platform == runtime.platform
+            }?.seedNumber
             return updatedRuntime
         }
     }

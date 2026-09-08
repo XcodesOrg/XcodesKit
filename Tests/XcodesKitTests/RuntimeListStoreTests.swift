@@ -20,7 +20,7 @@ final class RuntimeListStoreTests: XCTestCase {
         XCTAssertEqual(store.downloadableRuntimes, [runtime])
     }
 
-    func testUpdateFetchesAddsSDKBuildUpdatesAndSavesRuntimes() async throws {
+    func testUpdateAddsRuntimeMappingsAndSavesRuntimes() async throws {
         let runtime = Self.downloadableRuntime(buildUpdate: "20A360")
         let response = Self.downloadableResponse(
             downloadables: [runtime],
@@ -30,6 +30,13 @@ final class RuntimeListStoreTests: XCTestCase {
                     simulatorBuildUpdate: "20A360",
                     sdkIdentifier: "com.apple.platform.iphonesimulator",
                     downloadableIdentifiers: nil
+                )
+            ],
+            sdkToSeedMappings: [
+                SDKToSeedMapping(
+                    buildUpdate: "20A360",
+                    platform: .iOS,
+                    seedNumber: 2
                 )
             ]
         )
@@ -47,6 +54,7 @@ final class RuntimeListStoreTests: XCTestCase {
         let runtimes = try await store.updateDownloadableRuntimes()
 
         XCTAssertEqual(runtimes.map(\.sdkBuildUpdate), [["20A361"]])
+        XCTAssertEqual(runtimes.map(\.seedNumber), [2])
         XCTAssertEqual(store.downloadableRuntimes, runtimes)
         XCTAssertEqual(savedRuntimes.value, runtimes)
     }
@@ -71,11 +79,12 @@ final class RuntimeListStoreTests: XCTestCase {
 
     private static func downloadableResponse(
         downloadables: [DownloadableRuntime],
-        sdkToSimulatorMappings: [SDKToSimulatorMapping] = []
+        sdkToSimulatorMappings: [SDKToSimulatorMapping] = [],
+        sdkToSeedMappings: [SDKToSeedMapping] = []
     ) -> DownloadableRuntimesResponse {
         DownloadableRuntimesResponse(
             sdkToSimulatorMappings: sdkToSimulatorMappings,
-            sdkToSeedMappings: [],
+            sdkToSeedMappings: sdkToSeedMappings,
             refreshInterval: 0,
             downloadables: downloadables,
             version: "1"
