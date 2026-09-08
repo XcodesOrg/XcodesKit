@@ -47,6 +47,8 @@ public struct DownloadableRuntime: Codable, Identifiable, Hashable, Sendable {
     public var installState: RuntimeInstallState = .notInstalled
     /// SDK build updates that map to this simulator runtime.
     public var sdkBuildUpdate: [String]?
+    /// The beta seed number supplied by Apple's runtime index.
+    public var seedNumber: Int?
     
     enum CodingKeys: CodingKey {
         case category
@@ -62,15 +64,54 @@ public struct DownloadableRuntime: Codable, Identifiable, Hashable, Sendable {
         case name
         case authentication
         case sdkBuildUpdate
+        case seedNumber
         case architectures
     }
 
-    /// The beta seed number parsed from the runtime identifier, when present.
+    /// The beta seed number supplied by Apple, or inferred from legacy runtime metadata.
     public var betaNumber: Int? {
-        enum Regex { static let shared = try! NSRegularExpression(pattern: "b[0-9]+") }
-        guard var foundString = Regex.shared.firstString(in: identifier) else { return nil }
-        foundString.removeFirst()
-        return Int(foundString)!
+        seedNumber ?? legacyIdentifierBetaNumber ?? nameBetaNumber
+    }
+
+    private var legacyIdentifierBetaNumber: Int? {
+        // Apple's older runtime identifiers encoded the beta seed as a distinct component,
+        // for example `com.apple.dmg.iPhoneSimulatorSDK27_0_b3_1`.
+        //
+        // Newer runtimes can use UUID identifiers. Keep the match delimiter-bound so a
+        // random UUID fragment such as `7cb21db4a45b` is not misread as beta 21.
+        enum Regex {
+            static let shared = try! NSRegularExpression(
+                pattern: "(?:^|[_-])b([0-9]+)(?:[_-]|$)",
+                options: .caseInsensitive
+            )
+        }
+
+        let searchRange = NSRange(identifier.startIndex..., in: identifier)
+        guard
+            let match = Regex.shared.firstMatch(in: identifier, range: searchRange),
+            let betaRange = Range(match.range(at: 1), in: identifier)
+        else { return nil }
+
+        return Int(identifier[betaRange])
+    }
+
+    private var nameBetaNumber: Int? {
+        enum Regex {
+            static let shared = try! NSRegularExpression(
+                pattern: "\\bbeta(?:\\s+([0-9]+))?\\b",
+                options: .caseInsensitive
+            )
+        }
+
+        let searchRange = NSRange(name.startIndex..., in: name)
+        guard let match = Regex.shared.firstMatch(in: name, range: searchRange) else { return nil }
+
+        guard
+            match.range(at: 1).location != NSNotFound,
+            let betaRange = Range(match.range(at: 1), in: name)
+        else { return 1 }
+
+        return Int(name[betaRange])
     }
 
     /// The OS version plus beta suffix when this is a beta runtime.
