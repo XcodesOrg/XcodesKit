@@ -16,6 +16,8 @@ public enum XcodeInstallState: Equatable, Sendable {
     case installing(XcodeInstallationStep)
     /// The Xcode is installed at the associated path.
     case installed(Path)
+    /// The Xcode at the associated path is being uninstalled.
+    case uninstalling(Path)
 
     /// Whether the state is ``notInstalled``.
     public var notInstalled: Bool {
@@ -38,11 +40,19 @@ public enum XcodeInstallState: Equatable, Sendable {
         default: return false
         }
     }
+    /// Whether the state is ``uninstalling(_:)``.
+    public var uninstalling: Bool {
+        switch self {
+        case .uninstalling: return true
+        default: return false
+        }
+    }
 
-    /// The installed path when the state is ``installed(_:)``.
+    /// The installed path when the state is ``installed(_:)`` or ``uninstalling(_:)``.
     public var installedPath: Path? {
         switch self {
         case .installed(let path): return path
+        case .uninstalling(let path): return path
         default: return nil
         }
     }
