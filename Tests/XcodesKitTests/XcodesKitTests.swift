@@ -485,7 +485,7 @@ final class XcodesKitTests: XCTestCase {
         let recorder = PathOperationRecorder()
         let service = XcodeSelectionFilesystemService(
             fileExists: { _ in false },
-            attributesOfItem: { _ in [:] },
+            attributesOfItem: { _ in throw CocoaError(.fileReadNoSuchFile) },
             removeItem: { _ in XCTFail("Remove should not be called") },
             createSymbolicLink: { destination, source in
                 recorder.record("link:\(destination)->\(source)")
