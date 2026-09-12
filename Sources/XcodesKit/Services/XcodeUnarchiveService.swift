@@ -13,7 +13,7 @@ public enum XcodeUnarchiveStep: Equatable, Sendable {
 public struct XcodeUnarchiveService: Sendable {
     public typealias Unarchive = @Sendable (URL) async throws -> Void
     public typealias FileExists = @Sendable (String) -> Bool
-    public typealias MoveItem = @Sendable (URL, URL) throws -> Void
+    public typealias MoveItem = @Sendable (URL, URL) async throws -> Void
     public typealias RemoveItem = @Sendable (URL) throws -> Void
     public typealias StepChanged = @Sendable (XcodeUnarchiveStep) async -> Void
 
@@ -81,9 +81,9 @@ public struct XcodeUnarchiveService: Sendable {
         let xcodeURL = source.deletingLastPathComponent().appendingPathComponent("Xcode.app")
         let xcodeBetaURL = source.deletingLastPathComponent().appendingPathComponent("Xcode-beta.app")
         if fileExists(xcodeURL.path) {
-            try moveItem(xcodeURL, destination)
+            try await moveItem(xcodeURL, destination)
         } else if fileExists(xcodeBetaURL.path) {
-            try moveItem(xcodeBetaURL, destination)
+            try await moveItem(xcodeBetaURL, destination)
         }
 
         return destination
