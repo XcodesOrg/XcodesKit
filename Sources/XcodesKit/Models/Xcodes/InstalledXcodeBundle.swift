@@ -24,7 +24,17 @@ public struct XcodeBundleInfo: Equatable, Sendable {
         if let filenameVersion = Version(path.basename(dropExtension: true).replacingOccurrences(of: "Xcode-", with: "")) {
             prereleaseIdentifiers = filenameVersion.prereleaseIdentifiers
         } else if infoPlist.bundleIconName == "XcodeBeta", !prereleaseIdentifiers.contains("beta") {
-            prereleaseIdentifiers = ["beta"]
+            // The filename no longer carries the prerelease (e.g. renamed to Xcode.app), so fall back to the
+            // seed number Xcode ships in BetaVersion.plist. Beta 1 is unnumbered to match the release lists.
+            let betaVersionPlistPath = path.join("Contents").join("Resources").join("BetaVersion.plist")
+            let seedNumber = contentsAtPath(betaVersionPlistPath.string)
+                .flatMap { try? PropertyListDecoder().decode(BetaVersionPlist.self, from: $0) }
+                .flatMap { Int($0.seedNumber) }
+            if let seedNumber, seedNumber > 1 {
+                prereleaseIdentifiers = ["beta", String(seedNumber)]
+            } else {
+                prereleaseIdentifiers = ["beta"]
+            }
         }
 
         self.path = path
@@ -57,4 +67,8 @@ public struct VersionPlist: Decodable, Sendable {
     public enum CodingKeys: String, CodingKey {
         case productBuildVersion = "ProductBuildVersion"
     }
+}
+
+public struct BetaVersionPlist: Decodable, Sendable {
+    public let seedNumber: String
 }
