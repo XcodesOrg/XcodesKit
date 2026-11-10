@@ -153,6 +153,88 @@ final class InstalledXcodeTests: XCTestCase {
         ])
     }
 
+    func testRenamedBetaReadsSeedNumberFromBetaVersionPlist() throws {
+        let path = try XCTUnwrap(Path("/Applications/Xcode.app"))
+
+        let xcode = try XCTUnwrap(InstalledXcode(
+            path: path,
+            contentsAtPath: Self.betaBundleContents(appPath: path.string, seedNumber: "6"),
+            loadArchitectures: { _ in (0, "arm64\n", "") }
+        ))
+
+        XCTAssertEqual(xcode.version, Version("27.0.0-beta.6+27A5252f"))
+    }
+
+    func testRenamedFirstBetaMatchesUnnumberedBetaConvention() throws {
+        let path = try XCTUnwrap(Path("/Applications/Xcode.app"))
+
+        let xcode = try XCTUnwrap(InstalledXcode(
+            path: path,
+            contentsAtPath: Self.betaBundleContents(appPath: path.string, seedNumber: "1"),
+            loadArchitectures: { _ in (0, "arm64\n", "") }
+        ))
+
+        XCTAssertEqual(xcode.version, Version("27.0.0-beta+27A5252f"))
+    }
+
+    func testRenamedBetaWithoutBetaVersionPlistFallsBackToUnnumberedBeta() throws {
+        let path = try XCTUnwrap(Path("/Applications/Xcode.app"))
+
+        let xcode = try XCTUnwrap(InstalledXcode(
+            path: path,
+            contentsAtPath: Self.betaBundleContents(appPath: path.string, seedNumber: nil),
+            loadArchitectures: { _ in (0, "arm64\n", "") }
+        ))
+
+        XCTAssertEqual(xcode.version, Version("27.0.0-beta+27A5252f"))
+    }
+
+    func testFilenameVersionTakesPrecedenceOverBetaVersionPlist() throws {
+        let path = try XCTUnwrap(Path("/Applications/Xcode-27.0.0-Beta.5.app"))
+
+        let xcode = try XCTUnwrap(InstalledXcode(
+            path: path,
+            contentsAtPath: Self.betaBundleContents(appPath: path.string, seedNumber: "6"),
+            loadArchitectures: { _ in (0, "arm64\n", "") }
+        ))
+
+        XCTAssertEqual(xcode.version, Version("27.0.0-Beta.5+27A5252f"))
+    }
+
+    private static func betaBundleContents(appPath: String, seedNumber: String?) -> InstalledXcode.ContentsAtPath {
+        { requestedPath in
+            switch requestedPath {
+            case "\(appPath)/Contents/Info.plist":
+                return plistData("""
+                <dict>
+                    <key>CFBundleIdentifier</key>
+                    <string>com.apple.dt.Xcode</string>
+                    <key>CFBundleShortVersionString</key>
+                    <string>27.0</string>
+                    <key>CFBundleIconName</key>
+                    <string>XcodeBeta</string>
+                </dict>
+                """)
+            case "\(appPath)/Contents/version.plist":
+                return plistData("""
+                <dict>
+                    <key>ProductBuildVersion</key>
+                    <string>27A5252f</string>
+                </dict>
+                """)
+            case "\(appPath)/Contents/Resources/BetaVersion.plist":
+                return seedNumber.map { plistData("""
+                <dict>
+                    <key>seedNumber</key>
+                    <string>\($0)</string>
+                </dict>
+                """) }
+            default:
+                return nil
+            }
+        }
+    }
+
     private static func plistData(_ body: String) -> Data {
         Data("""
         <?xml version="1.0" encoding="UTF-8"?>

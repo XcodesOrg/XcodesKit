@@ -1278,6 +1278,34 @@ final class XcodesKitTests: XCTestCase {
         XCTAssertEqual(items.first?.selected, true)
     }
 
+    func testXcodeListComposerMatchesRenamedBetaToItsSeedForAppleDataSource() throws {
+        let composer = XcodeListComposer()
+        let installedPath = try XCTUnwrap(Path("/Applications/Xcode.app"))
+        let url = try XCTUnwrap(URL(string: "https://apple.com/xcode.xip"))
+
+        let items = composer.compose(
+            availableXcodes: [
+                AvailableXcode(version: try XCTUnwrap(Version("27.0.0-beta.6")), url: url, filename: "mock.xip", releaseDate: nil),
+                AvailableXcode(version: try XCTUnwrap(Version("27.0.0-beta.5")), url: url, filename: "mock.xip", releaseDate: nil),
+                AvailableXcode(version: try XCTUnwrap(Version("27.0.0-beta")), url: url, filename: "mock.xip", releaseDate: nil),
+            ],
+            installedXcodes: [
+                InstalledXcode(path: installedPath, version: try XCTUnwrap(Version("27.0.0-beta.6+27A5252f")))
+            ],
+            selectedXcodePath: "\(installedPath.string)/Contents/Developer",
+            existingXcodes: [],
+            dataSource: .apple
+        )
+
+        XCTAssertEqual(items.map(\.version), [
+            try XCTUnwrap(Version("27.0.0-beta.6+27A5252f")),
+            try XCTUnwrap(Version("27.0.0-beta.5")),
+            try XCTUnwrap(Version("27.0.0-beta")),
+        ])
+        XCTAssertEqual(items.map(\.installState), [.installed(installedPath), .notInstalled, .notInstalled])
+        XCTAssertEqual(items.map(\.selected), [true, false, false])
+    }
+
     func testXcodeListPresentationServiceBuildsAvailableRows() throws {
         let selectedPath = try XCTUnwrap(Path("/Applications/Xcode-15.0.app"))
         let installedPath = try XCTUnwrap(Path("/Applications/Xcode-14.0.app"))
