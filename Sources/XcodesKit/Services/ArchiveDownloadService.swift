@@ -84,7 +84,8 @@ public struct ArchiveDownloadService: Sendable {
     }
 
     public static func resumeDataPath(for archive: XcodeArchive, in directory: Path) -> Path {
-        directory/"Xcode-\(archive.version).resumedata"
+        let formatSuffix = URL(fileURLWithPath: archive.filename).pathExtension.lowercased() == "aea" ? ".aea" : ""
+        return directory/"Xcode-\(archive.version)\(formatSuffix).resumedata"
     }
 
     /// Apple redirects unauthorized downloads to an HTML page with a 200 status. Treat that

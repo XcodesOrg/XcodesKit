@@ -126,17 +126,19 @@ extension Process {
         return try await withTaskCancellationHandler {
             try await runner.run()
         } onCancel: {
-            runner.cancel()
+            Task { await runner.cancel() }
         }
     }
     
 }
 
-private final class AsyncProcessRunner: Sendable {
+private actor AsyncProcessRunner {
+    private typealias Completion = CheckedContinuation<Result<ProcessOutput, Swift.Error>, Never>
+
     private let process: Process
     private let stdout: Pipe
     private let stderr: Pipe
-    private let request = OneShotContinuation<ProcessOutput>()
+    // FileHandle delivers its readability callbacks outside the actor.
     private let output = OSAllocatedUnfairLock(initialState: OutputStorage())
 
     init(process: Process, stdout: Pipe, stderr: Pipe) {
@@ -146,31 +148,34 @@ private final class AsyncProcessRunner: Sendable {
     }
 
     func run() async throws -> ProcessOutput {
-        try await request.value {
+        try Task.checkCancellation()
+        let result = await withCheckedContinuation { (completion: Completion) in
             startReadingOutput()
 
             process.terminationHandler = { [weak self] process in
-                self?.finish(process: process)
+                Task { await self?.finish(process: process, completion: completion) }
             }
 
             do {
                 try process.run()
             } catch {
+                process.terminationHandler = nil
                 clearReadabilityHandlers()
-                throw error
+                completion.resume(returning: .failure(error))
             }
         }
+        try Task.checkCancellation()
+        return try result.get()
     }
 
     func cancel() {
         if process.isRunning {
             process.terminate()
         }
-        clearReadabilityHandlers()
-        request.resume(throwing: CancellationError())
+        // The termination callback resumes the waiter so cleanup happens after exit.
     }
 
-    private func finish(process: Process) {
+    private func finish(process: Process, completion: Completion) {
         clearReadabilityHandlers()
         appendRemainingOutput()
 
@@ -184,19 +189,11 @@ private final class AsyncProcessRunner: Sendable {
         }
 
         guard process.terminationReason == .exit, process.terminationStatus == 0 else {
-            resume(throwing: ProcessExecutionError(process: process, terminationStatus: process.terminationStatus, standardOutput: output, standardError: error))
+            completion.resume(returning: .failure(ProcessExecutionError(process: process, terminationStatus: process.terminationStatus, standardOutput: output, standardError: error)))
             return
         }
 
-        resume(returning: (process.terminationStatus, output, error))
-    }
-
-    private func resume(returning output: ProcessOutput) {
-        request.resume(with: .success(output))
-    }
-
-    private func resume(throwing error: Swift.Error) {
-        request.resume(throwing: error)
+        completion.resume(returning: .success((process.terminationStatus, output, error)))
     }
 
     private func startReadingOutput() {
@@ -208,7 +205,7 @@ private final class AsyncProcessRunner: Sendable {
         }
     }
 
-    private func appendAvailableData(from handle: FileHandle, stream: OutputStream) {
+    nonisolated private func appendAvailableData(from handle: FileHandle, stream: OutputStream) {
         let data = handle.availableData
         guard data.isEmpty == false else { return }
 
@@ -227,7 +224,7 @@ private final class AsyncProcessRunner: Sendable {
         }
     }
 
-    private func append(_ data: Data, to stream: OutputStream, storage: inout OutputStorage) {
+    nonisolated private func append(_ data: Data, to stream: OutputStream, storage: inout OutputStorage) {
         guard data.isEmpty == false else { return }
 
         switch stream {

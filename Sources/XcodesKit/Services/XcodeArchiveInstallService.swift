@@ -43,7 +43,7 @@ public struct XcodeArchiveInstallService: Sendable {
         cleanArchive: @escaping CleanArchive,
         stepChanged: @escaping StepChanged = { _ in }
     ) async throws -> InstalledXcode {
-        guard archiveURL.pathExtension == "xip" else {
+        guard ["xip", "aea"].contains(archiveURL.pathExtension.lowercased()) else {
             throw XcodeArchiveInstallError.unsupportedFileFormat(extension: archiveURL.pathExtension)
         }
 
@@ -51,7 +51,7 @@ public struct XcodeArchiveInstallService: Sendable {
             .join("Xcode-\(xcode.version.descriptionWithoutBuildMetadata).app")
             .url
 
-        let xcodeURL = try await unarchiveService.unarchiveAndMoveXIP(at: archiveURL, to: destinationURL) { step in
+        let xcodeURL = try await unarchiveService.unarchiveAndMove(at: archiveURL, to: destinationURL) { step in
             await stepChanged(.unarchive(step))
         }
 

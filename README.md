@@ -50,3 +50,19 @@ Run the test suite:
 ```sh
 swift test
 ```
+
+The CLI and app also have opt-in download smoke tests. With local copies of
+Xcode 27.3 beta in both formats, run:
+
+```sh
+python3 Tests/serve_archive_smoke_fixtures.py /path/to/Xcode_27.3_beta.aea /path/to/Xcode_27.3_beta.xip
+```
+
+Use the printed URL as `XCODES_ARCHIVE_SMOKE_URL`. Run the CLI's
+`test_InstallDownloaded…` tests with `HOME` and `XCODES_ARCHIVE_SMOKE_HOME`
+set to the same fresh `mktemp -d /tmp/xcodes-cli-smoke.XXXXXXXX` directory,
+and set `XCODES_ARCHIVE_SMOKE_ARIA2` to the `aria2c` executable. Run the app's
+`test_Install_Downloaded…` tests with `TEST_RUNNER_XCODES_ARCHIVE_SMOKE_URL`
+when using `xcodebuild`. For a known damaged XIP fixture, set
+`XCODES_ARCHIVE_SMOKE_EXPECT_DAMAGED_XIP=1` (prefix it with `TEST_RUNNER_`
+for the app under `xcodebuild`) to test rejection instead of installation.

@@ -7,6 +7,23 @@ public struct XcodesShell: Sendable {
     public var unxip: @Sendable (URL) async throws -> ProcessOutput = {
         try await XcodesProcess.run(Path.root.usr.bin.xip, workingDirectory: $0.deletingLastPathComponent(), "--expand", $0.path)
     }
+    public var extractXcodeAEA: @Sendable (URL, URL) async throws -> Void = { archive, workingDirectory in
+        let archiveutil = Path.root.usr.bin.archiveutil
+        guard FileManager.default.isExecutableFile(atPath: archiveutil.string) else {
+            throw XcodesKitError("Installing a .aea archive requires a version of macOS with archiveutil. Update macOS or use a .xip archive if available.")
+        }
+
+        do {
+            _ = try await XcodesProcess.run(archiveutil, workingDirectory: workingDirectory, "extractXcodeAEA", archive.path)
+        } catch let error as ProcessExecutionError {
+            let diagnostic = [error.standardError, error.standardOutput]
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .joined(separator: "\n")
+            let detail = diagnostic.isEmpty ? "archiveutil exited with status \(error.terminationStatus)." : diagnostic
+            throw XcodesKitError("Could not extract \(archive.lastPathComponent): \(detail)")
+        }
+    }
     public var spctlAssess: @Sendable (URL) async throws -> ProcessOutput = {
         try await XcodesProcess.run(Path.root.usr.sbin.spctl, "--assess", "--verbose", "--type", "execute", $0.path)
     }

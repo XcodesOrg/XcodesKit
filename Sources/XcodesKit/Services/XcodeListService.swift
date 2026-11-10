@@ -113,7 +113,9 @@ public struct XcodeListService: Sendable {
             .filter { $0.name.range(of: "^Xcode [0-9]", options: .regularExpression) != nil }
             .compactMap { download -> AvailableXcodeRelease? in
                 guard
-                    let xcodeFile = download.files.first(where: { $0.remotePath.hasSuffix("dmg") || $0.remotePath.hasSuffix("xip") }),
+                    let xcodeFile = download.files.first(where: {
+                        ["dmg", "xip", "aea"].contains(URL(fileURLWithPath: $0.remotePath).pathExtension.lowercased())
+                    }),
                     let version = Version(xcodeVersion: download.name)
                 else { return nil }
 
@@ -121,7 +123,7 @@ public struct XcodeListService: Sendable {
                 return AvailableXcodeRelease(
                     version: version,
                     url: url,
-                    filename: String(xcodeFile.remotePath.suffix(fromLast: "/")),
+                    filename: url.lastPathComponent,
                     releaseDate: download.dateModified,
                     fileSize: xcodeFile.fileSize
                 )
@@ -176,7 +178,7 @@ public struct XcodeListService: Sendable {
             return AvailableXcodeRelease(
                 version: version,
                 url: downloadURL,
-                filename: String(downloadURL.path.suffix(fromLast: "/")),
+                filename: Self.archiveFileName(from: downloadURL),
                 releaseDate: releaseDate,
                 requiredMacOSVersion: release.requires,
                 releaseNotesURL: release.links?.notes?.url,
@@ -196,19 +198,31 @@ public struct XcodeListService: Sendable {
             let xcodeHeader = try document.select("h2:containsOwn(Xcode)").first(),
             let productBuildVersion = try xcodeHeader.parent()?.select("li:contains(Build)").text().replacingOccurrences(of: "Build", with: ""),
             let releaseDateString = try xcodeHeader.parent()?.select("li:contains(Released)").text().replacingOccurrences(of: "Released", with: ""),
-            let version = Version(xcodeVersion: try xcodeHeader.text(), buildMetadataIdentifier: productBuildVersion),
-            let path = try document.select(".direct-download[href*=xip]").first()?.attr("href"),
-            let url = URL(string: "https://developer.apple.com" + path)
+            let version = Version(xcodeVersion: try xcodeHeader.text(), buildMetadataIdentifier: productBuildVersion)
         else { return [] }
 
-        return [
-            AvailableXcodeRelease(
-                version: version,
-                url: url,
-                filename: String(path.suffix(fromLast: "/")),
-                releaseDate: DateFormatter.downloadsReleaseDate.date(from: releaseDateString)
-            )
-        ]
+        for link in try document.select(".direct-download[href]").array() {
+            guard let url = URL(string: try link.attr("href"), relativeTo: .developerDownload)?.absoluteURL else { continue }
+            let filename = archiveFileName(from: url)
+            guard ["xip", "aea"].contains(URL(fileURLWithPath: filename).pathExtension.lowercased()) else { continue }
+            return [
+                AvailableXcodeRelease(
+                    version: version,
+                    url: url,
+                    filename: filename,
+                    releaseDate: DateFormatter.downloadsReleaseDate.date(from: releaseDateString)
+                )
+            ]
+        }
+        return []
+    }
+
+    private static func archiveFileName(from url: URL) -> String {
+        if let path = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "path" })?.value,
+           !path.isEmpty {
+            return URL(fileURLWithPath: path).lastPathComponent
+        }
+        return url.lastPathComponent
     }
 
     /// Removes prerelease entries that duplicate an equivalent release with the same build metadata.
